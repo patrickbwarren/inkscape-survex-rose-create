@@ -110,8 +110,8 @@ try: # catch IOErrors below
         if version < 8:
             raise IOError('Version >= 8 required: ' + FILE)
 
-        line = fp.readline().rstrip() # Metadata (title and coordinate system)
-        title, cs = [s.decode('utf-8') for s in line.split(b'\x00')]
+        line = fp.readline().rstrip() # Metadata (title, and coordinate system)
+        title = line.split(b'\x00')[0].decode('utf-8')
 
         if e.options.title != '':
             title = e.options.title
