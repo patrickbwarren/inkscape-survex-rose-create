@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-  <_name>Rose diagram from .3d file</_name>
+  <_name>Rose diagram</_name>
   <id>org.patrickbwarren.create.rose</id>
   <dependency type="executable" location="extensions">rose_create.py</dependency>
   <param name="nsector" type="optiongroup" gui-text="Number of sectors: ">
