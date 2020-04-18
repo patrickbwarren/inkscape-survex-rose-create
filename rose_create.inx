@@ -10,7 +10,7 @@
     <option value="64">64</option>
   </param>
   <param name="bw" type="boolean" gui-text="Render in black and white">false</param>
-  <param name="title" type="string" max_length="20" gui-text="Title: " gui-description="Leave blank to default to survey name">
+  <param name="title" type="string" max_length="30" gui-text="Title: " gui-description="Leave blank to default to survey name">
   </param>
   <input>
     <extension>.3d</extension>

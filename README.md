@@ -1,16 +1,18 @@
 # Create rose diagrams in Inkscape from survex .3d files
 
+*Updated (2020) for python3 and Inkscape 1.0beta*
+
 Calculate a passage orientation rose diagram from a survex `.3d` file on
 the fly and render it into an Inkscape document as an SVG group object.
 
 ### Usage
 
-The extension is operated as an import filter.  To run it do File
-&rarr; Import ... , and choose the 'Rose diagram (*.3d)' option.  This
-brings up a small dialog box with options to set the number of
+The extension is an import filter: do File &rarr; Import ... , and
+choose the 'Rose diagram (*.3d)' option (or select a `.3d` file).
+This brings up a small dialog box with options to set the number of
 sectors, choose whether to render the diagram in color (default) or
-black and white, and to set a title.  If the title is left unset in
-the dialog, a default title is extracted from the `.3d` file.
+black and white, and to set a title.  If the title is left blank, a
+default title is extracted from the `.3d` file.
 
 ### Installation
 
@@ -45,5 +47,7 @@ The `.3d` file parser is based on a GPL v3 library to handle Survex
 http://sf.net/users/speleo3/; 
 see also https://github.com/speleo3/inkscape-speleo.
 
-Modifications and extensions to compute rose diagrams and export SVG,
-copyright &copy; (2018) Patrick B Warren.
+Modifications copyright &copy; (2018, 2020) Patrick B Warren
+
+Email: <patrickbwarren@gmail.com>
+
