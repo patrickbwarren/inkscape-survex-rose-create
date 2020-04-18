@@ -78,14 +78,14 @@ def read_label(fp):
 
 e = inkex.Effect()
 
-e.arg_parser.add_argument('--title', default='', help = 'Set title, default fetch from file')
-e.arg_parser.add_argument('--nsector', default='16',  help = 'number of sectors, default 16')
-e.arg_parser.add_argument('--bw', help = 'render in black and white')
+e.arg_parser.add_argument('--title', default='', help='Set title, default fetch from file')
+e.arg_parser.add_argument('--nsector', default='16',  help='number of sectors, default 16')
+e.arg_parser.add_argument('--bw', help='render in black and white')
 
 args = e.arg_parser.parse_args()
 
 ns = int(args.nsector)
-bw = args.bw == 'true'
+bw = (args.bw == 'true')
 
 FILE = sys.argv[-1]
 
