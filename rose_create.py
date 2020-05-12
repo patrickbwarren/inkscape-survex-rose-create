@@ -212,14 +212,13 @@ class RoseDiagram(inkex.GenerateExtension):
         pars.add_argument('--file', help='.3d file')
         pars.add_argument('--title', default='', help='Set title, default fetch from file')
         pars.add_argument('--nsector', type=int, default=16, help='number of sectors, default 16')
-        pars.add_argument('--bw', help='render in black and white')
+        pars.add_argument('--bw', type=inkex.Boolean, help='render in black and white')
         pars.add_argument('--size', type=float, default=100.0, help='overall size (px), default 100.0')
         pars.add_argument('--head', type=float, default=10.0, help='arrow head size (px), default 10.0')
         pars.add_argument('--width', type=float, default=1.0, help='line width (pt), default 1.0')
 
     def generate(self):
-        
-        bw = self.options.bw == 'true'
+
         size = self.svg.unittouu(str(self.options.size) + 'px')
         head = self.svg.unittouu(str(self.options.head) + 'px')
         width = self.svg.unittouu(str(self.options.width) + 'pt')
@@ -253,7 +252,7 @@ class RoseDiagram(inkex.GenerateExtension):
         # Add the lines and arc elements - 'z' closes the path
 
         zigzag = inkex.PathElement(d=' '.join(elements) + ' z')
-        zigzag.style = {'stroke': 'black', 'fill': 'none' if bw else 'yellow', 'stroke-width': width}
+        zigzag.style = {'stroke': 'black', 'fill': 'none' if self.options.bw else 'yellow', 'stroke-width': width}
         rose_diagram.add(zigzag)
 
         # Adjust the scale circle radius, rounding down if necessary
@@ -265,8 +264,8 @@ class RoseDiagram(inkex.GenerateExtension):
         # Add the scale circle 
 
         circle = inkex.Circle(r=str(size * scale_rad / tmax))
-        circle.style = {'stroke': 'black' if bw else 'blue', 'fill': 'none', 'stroke-width': width}
-        if bw:
+        circle.style = {'stroke': 'black' if self.options.bw else 'blue', 'fill': 'none', 'stroke-width': width}
+        if self.options.bw:
             circle.style['stroke-dasharray'] = '{step} {step}'.format(step=4*width)
         rose_diagram.add(circle)
 
