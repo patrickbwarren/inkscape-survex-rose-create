@@ -21,7 +21,7 @@ along with this program.  If not, see
 <http://www.gnu.org/licenses/>.
 -->
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-  <_name>Rose diagram from .3d file</_name>
+  <name>Rose diagram from .3d file</name>
   <id>org.patrickbwarren.rose_create</id>
   <param type="float" name="size" min="1" max="1000" gui-text="Overall size (px):">100.0</param>
   <param type="float" name="head" min="1" max="1000" gui-text="North arrow size (px):">10.0</param>
