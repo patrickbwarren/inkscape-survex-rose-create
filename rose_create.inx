@@ -1,24 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+rose_input.inx
+Inkscape extension wrapper for making rose diagrams from survex (.3d) files
+
+Copyright (C) 2018, 2020 Patrick B Warren
+Email: patrickbwarren@gmail.com
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+-->
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-  <_name>Rose diagram</_name>
-  <id>org.patrickbwarren.create.rose</id>
-  <dependency type="executable" location="extensions">rose_create.py</dependency>
-  <param name="nsector" type="optiongroup" gui-text="Number of sectors: ">
-    <option value="8">8</option>
-    <option value="16">16</option>
-    <option value="32">32</option>
-    <option value="64">64</option>
+  <_name>Rose diagram from .3d file</_name>
+  <id>org.patrickbwarren.rose_create</id>
+  <param type="float" name="size" min="1" max="1000" gui-text="Overall size (px):">100.0</param>
+  <param type="float" name="head" min="1" max="1000" gui-text="North arrow size (px):">10.0</param>
+  <param type="float" name="width" min="0" max="100" gui-text="Line widths (pt):">0.8</param>
+  <param type="optiongroup" name="nsector" appearance="minimal" gui-text="Number of sectors: ">
+    <item value="8">8</item>
+    <item value="16">16</item>
+    <item value="32">32</item>
+    <item value="64">64</item>
   </param>
-  <param name="bw" type="boolean" gui-text="Render in black and white">false</param>
-  <param name="title" type="string" max_length="30" gui-text="Title: " gui-description="Leave blank to default to survey name">
-  </param>
-  <input>
-    <extension>.3d</extension>
-    <mimetype>application/survex</mimetype>
-    <_filetypename>Rose diagram (*.3d)</_filetypename>
-    <_filetypetooltip>Survex file</_filetypetooltip>
-  </input>
+  <param type="boolean" name="bw" gui-text="Render in black and white">false</param>
+  <param type="string" name="title" max_length="30" gui-text="Title: " gui-description="Leave blank to use survey name"/>
+  <param type="path" name="file" gui-text="File (*.3d): " mode="file" filetypes="3d"/>
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+      <submenu name="Render"/>
+    </effects-menu>
+  </effect>
   <script>
-    <command reldir="extensions" interpreter="python">rose_create.py</command>
+    <command location="extensions" interpreter="python">rose_create.py</command>
   </script>
 </inkscape-extension>

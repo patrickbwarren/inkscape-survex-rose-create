@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-
+# -*- coding: utf-8 -*-
 """
 rose_input.py
-Python script for creating rose diagrams from survex (.3d) files in Inkscape
+Inkscape extension to make rose diagrams from survex (.3d) files
 
 Based on library to handle Survex 3D files (*.3d)
 Copyright (C) 2008-2012 Thomas Holder, http://sf.net/users/speleo3/
 
 Modifications copyright (C) 2018, 2020 Patrick B Warren
-
 Email: patrickbwarren@gmail.com
 
 This program is free software: you can redistribute it and/or modify
@@ -27,71 +26,48 @@ along with this program.  If not, see
 """
 
 import sys
+import inkex
 import math as m
 from struct import unpack
-import inkex
 
-def fancyround(x):
+def fancy_round(x, offset=0.5):
+    """Rounds a number, allowing 1.5 and 2.5 """
     b = m.pow(10, m.floor(m.log10(x)))
-    c = m.floor(x / b + 0.5)
+    c = m.floor(x / b + offset)
     if (c == 1.0 and x/b > 1.25) or (c == 2.0 and x/b < 1.75):
         c = 1.5
     if (c == 2.0 and x/b > 2.25) or (c == 3.0 and x/b < 2.75):
         c = 2.5
     return c * b
 
-def fancyfloor(x):
-    b = m.pow(10, m.floor(log10(x)))
-    c = m.floor(x / b)
-    if (c == 1.0 and x/b > 1.25) or (c == 2.0 and x/b < 1.75):
-        c = 1.5
-    if (c == 2.0 and x/b > 2.25) or (c == 3.0 and x/b < 2.75):
-        c = 2.5
-    return c * b
+def analyse3d(filename, ns):
+    """Read in a .3d file and extract leg data"""
 
-def read_xyz(fp):
-    """Read xyz as signed integers according to .3d spec"""
-    return unpack('<iii', fp.read(12))
+    def read_xyz(fp):
+        """Read xyz as signed integers according to .3d spec"""
+        return unpack('<iii', fp.read(12))
 
-def read_len(fp):
-    """Read a number as a length according to .3d spec"""
-    byte = ord(fp.read(1))
-    if byte != 0xff:
-        return byte
-    else:
-        return unpack('<I', fp.read(4))[0]
+    def read_len(fp):
+        """Read a number as a length according to .3d spec"""
+        byte = ord(fp.read(1))
+        if byte != 0xff:
+            return byte
+        else:
+            return unpack('<I', fp.read(4))[0]
 
-def read_label(fp):
-    """Read a string as a label, or part thereof, according to .3d spec"""
-    byte = ord(fp.read(1))
-    if byte != 0x00:
-        ndel = byte >> 4
-        nadd = byte & 0x0f
-    else:
-        ndel = read_len(fp)
-        nadd = read_len(fp)
-    fp.read(nadd).decode('ascii')
-    return
+    def read_label(fp):
+        """Read a string as a label, or part thereof, according to .3d spec"""
+        byte = ord(fp.read(1))
+        if byte != 0x00:
+            ndel = byte >> 4
+            nadd = byte & 0x0f
+        else:
+            ndel = read_len(fp)
+            nadd = read_len(fp)
+        fp.read(nadd).decode('ascii')
+        return
 
-# `self.OptionParser.add_option` to `self.arg_parser.add_argument`; the arguments are similar.
-# Start of main code
-
-e = inkex.Effect()
-
-e.arg_parser.add_argument('--title', default='', help='Set title, default fetch from file')
-e.arg_parser.add_argument('--nsector', default='16',  help='number of sectors, default 16')
-e.arg_parser.add_argument('--bw', help='render in black and white')
-
-args = e.arg_parser.parse_args()
-
-ns = int(args.nsector)
-bw = (args.bw == 'true')
-
-FILE = sys.argv[-1]
-
-try: # catch IOErrors below
-
-    with open(FILE, 'rb') as fp:
+    with open(filename, 'rb') as fp:
 
         line = fp.readline().rstrip() # File ID
         if not line.startswith(b'Survex 3D Image File'):
@@ -106,7 +82,7 @@ try: # catch IOErrors below
 
         line = fp.readline().rstrip() # Metadata (title, and coordinate system)
 
-        title = args.title if args.title else line.split(b'\x00')[0].decode('utf-8')
+        title = line.split(b'\x00')[0].decode('utf-8')
 
         line = fp.readline().rstrip() # Timestamp
         if not line.startswith(b'@'):
@@ -208,7 +184,7 @@ try: # catch IOErrors below
                         nhoriz += 1
 
                         # Calculate the bearing in ang, given that x is
-                        # east and y is north.  Add lslant to the sectors
+                        # east and y is north.  Add lhoriz to the sectors
                         # containing ang and ang + 180. */
 
                         bearing = m.atan2(dx, dy) * 180 / m.pi
@@ -226,95 +202,113 @@ try: # catch IOErrors below
                 read_label(fp)
                 read_xyz(fp)
 
-# .3d file closes automatically, with open(FILE, 'rb') as fp:
+    return tsector, title
 
-except IOError as msg:
+# Create a subclass and overwrite methods
 
-    inkex.errormsg(str(msg))
-    sys.exit(1)
+class RoseDiagram(inkex.GenerateExtension):
 
-# Construct a string with the SVG rose diagram
+    def add_arguments(self, pars):
+        pars.add_argument('--file', help='.3d file')
+        pars.add_argument('--title', default='', help='Set title, default fetch from file')
+        pars.add_argument('--nsector', type=int, default=16, help='number of sectors, default 16')
+        pars.add_argument('--bw', help='render in black and white')
+        pars.add_argument('--size', type=float, default=100.0, help='overall size (px), default 100.0')
+        pars.add_argument('--head', type=float, default=10.0, help='arrow head size (px), default 10.0')
+        pars.add_argument('--width', type=float, default=1.0, help='line width (pt), default 1.0')
 
-rad_circle = 420
+    def generate(self):
+        
+        bw = self.options.bw == 'true'
+        size = self.svg.unittouu(str(self.options.size) + 'px')
+        head = self.svg.unittouu(str(self.options.head) + 'px')
+        width = self.svg.unittouu(str(self.options.width) + 'pt')
+        medium = self.svg.unittouu('10pt') # font sizes, ...
+        large = self.svg.unittouu('12pt') # ... could be options
 
-string  = "<?xml version=\"1.0\" standalone=\"no\"?>\n"
-string += "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n"
-string += "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n"
-string += "<svg width=\"12cm\" height=\"12cm\" viewBox=\"0 0 1200 1200\"\n"
-string += "     xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">\n"
-string += "  <g transform=\"translate(600,610)\">\n"
+        tsector, survey_title = analyse3d(self.options.file, self.options.nsector)
 
-tmax = max(tsector)
-tmean = 2 * thoriz / ns
+        tmax = max(tsector)
+        thoriz = 0.5 * sum(tsector) # each leg is counted twice
+        ns = len(tsector)
+        tmean = 2 * thoriz / ns
 
-for i in range(ns):
-    alo = 2 * m.pi * (i - 0.5) / ns
-    ahi = 2 * m.pi * (i + 0.5) / ns
-    rad = rad_circle * tsector[i] / tmax
-    xx0 = rad * m.sin(alo)
-    yy0 = - rad * m.cos(alo)
-    xx1 = rad * m.sin(ahi)
-    yy1 = - rad * m.cos(ahi)
-    if i == 0:
-        string += "    <path d=\"M %7.2f, %7.2f " % (xx0, yy0)
-    else:
-        string += "             L %7.2f, %7.2f " % (xx0, yy0)
-    string += "A %6.2f, %6.2f 0 0,1 %7.2f, %7.2f" % (rad, rad, xx1, yy1)
-    if i < ns-1:
-        string += "\n"
-    else:
-        string += " z\"\n"
+        # Inner group to contain all the rose diagram elements
 
-string += "          fill=\"%s\" stroke=\"black\" stroke-width=\"2\" />\n" % ('none' if bw else 'yellow')
+        rose_diagram = inkex.Group() 
 
-rad = fancyround(tmean)
+        elements = [''] * (2*ns) # list of lines and arc elements
 
-if rad > tmax:
-    rad = fancyfloor(tmean)
+        for i, v in enumerate(tsector):
+            alo = 2 * m.pi * (i - 0.5) / ns
+            ahi = 2 * m.pi * (i + 0.5) / ns
+            rad = size * tsector[i] / tmax
+            xx0 = rad * m.sin(alo)
+            yy0 = - rad * m.cos(alo)
+            xx1 = rad * m.sin(ahi)
+            yy1 = - rad * m.cos(ahi)
+            elements[2*i] = ('L' if i else 'M') + '%7.2f, %7.2f ' % (xx0, yy0)
+            elements[2*i+1] = 'A %6.2f, %6.2f 0 0,1 %7.2f, %7.2f' % (rad, rad, xx1, yy1)
 
-string += "    <circle%s r=\"%0.2f\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\" />\n" % (' stroke-dasharray="10 10"' if bw else '',
-                                                                                             rad_circle * rad / tmax,
-                                                                                             'black' if bw else 'blue')
+        # Add the lines and arc elements - 'z' closes the path
 
-string += "    <path d=\"M-450,0 h900\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" />\n"
-string += "    <path d=\"M0,-450 v900\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" />\n"
-string += "    <path d=\"M-318.2,-318.2 L318.2,318.2\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" />\n"
-string += "    <path d=\"M318.2,-318.2 L-318.2,318.2\" fill=\"none\" stroke=\"black\" stroke-width=\"2\" />\n"
+        zigzag = inkex.PathElement(d=' '.join(elements) + ' z')
+        zigzag.style = {'stroke': 'black', 'fill': 'none' if bw else 'yellow', 'stroke-width': width}
+        rose_diagram.add(zigzag)
 
-string += "    <text x=\"-480\" y=\"0\" font-family=\"Verdana\" font-size=\"50\" \n"
-string += "          fill=\"black\" dy=\"0.35em\" text-anchor=\"middle\">W</text>\n"
-string += "    <text x=\"480\" y=\"0\" font-family=\"Verdana\" font-size=\"50\" \n"
-string += "          fill=\"black\" dy=\"0.35em\" text-anchor=\"middle\">E</text>\n"
-string += "    <text x=\"0\" y=\"-480\" dy=\"0.35em\" font-family=\"Verdana\" font-size=\"50\"\n"
-string += "          fill=\"black\" text-anchor=\"middle\">N</text>\n"
-string += "    <text x=\"0\" y=\"480\" dy=\"0.35em\" font-family=\"Verdana\" font-size=\"50\"\n"
-string += "          fill=\"black\" text-anchor=\"middle\">S</text>\n"
+        # Adjust the scale circle radius, rounding down if necessary
+        
+        scale_rad = fancy_round(tmean)
+        if scale_rad > tmax:
+            scale_rad = fancy_round(tmean, offset=0.0)
 
-string += "    <text x=\"344.4\" y=\"344.4\" dy=\"0.35em\" font-family=\"Verdana\" font-size=\"50\"\n"
-string += "          fill=\"black\" text-anchor=\"middle\">SE</text>\n"
+        # Add the scale circle 
 
-string += "    <text x=\"-344.4\" y=\"344.4\" dy=\"0.35em\" font-family=\"Verdana\" font-size=\"50\"\n"
-string += "          fill=\"black\" text-anchor=\"middle\">SW</text>\n"
+        circle = inkex.Circle(r=str(size * scale_rad / tmax))
+        circle.style = {'stroke': 'black' if bw else 'blue', 'fill': 'none', 'stroke-width': width}
+        if bw:
+            circle.style['stroke-dasharray'] = '{step} {step}'.format(step=4*width)
+        rose_diagram.add(circle)
 
-string += "    <text x=\"344.4\" y=\"-344.4\" dy=\"0.3em\" font-family=\"Verdana\" font-size=\"50\"\n"
-string += "          fill=\"black\" text-anchor=\"middle\">NE</text>\n"
+        # Add N-S, E-W, NW-SE, NE-SW lines; the N has a half-arrow
 
-string += "    <text x=\"-344.4\" y=\"-344.4\" dy=\"0.3em\" font-family=\"Verdana\" font-size=\"50\"\n"
-string += "          fill=\"black\" text-anchor=\"middle\">NW</text>\n"
+        style = {'stroke': 'black', 'fill': 'none', 'stroke-width': width}
+        style = str(inkex.Style(style))
 
-string += "  </g>\n"
+        length = 1.05 * size
+        rose_diagram.add(inkex.PathElement(d=f'M0,{-length+2*head} L{-head},{-length+2*head} L0,-{length} L0,{length}', style=style))
+        rose_diagram.add(inkex.PathElement(d=f'M-{length},0 L{length},0', style=style))
 
-string += "    <text x=\"600\" y=\"70\" font-family=\"Verdana\" font-size=\"60\"\n"
-string += "          fill=\"black\" text-anchor=\"middle\">%s</text>\n" % title
+        length = m.sqrt(0.5) * 1.05 * size
+        rose_diagram.add(inkex.PathElement(d=f'M-{length},-{length} L{length},{length}', style=style))
+        rose_diagram.add(inkex.PathElement(d=f'M{length},-{length} L-{length},{length}', style=style))
 
-string += "    <text x=\"600\" y=\"1190\" font-family=\"Verdana\" font-size=\"50\"\n"
+        # Add a 'N' to the north arrow
+        
+        north = inkex.TextElement(x=str(head), y=str(-1.05*size+head))
+        north.style = {'font-family': 'Verdana', 'font-size': large, 'fill': 'black', 'text-anchor': 'middle', 'text-align': 'center'}        
+        north.text = 'N'
+        rose_diagram.add(north)
 
-string += "          fill=\"black\" text-anchor=\"middle\">"
-string += "length %g %s, " % ((round(thoriz/100)/10, "km") if thoriz > 10000 else (round(thoriz), "m"))
-string += "circle radius is %g %s</text>\n" % ((rad/1000, "km") if rad > 1000 else (rad, "m"))
+        yield rose_diagram
 
-string += "</svg>\n"
+        # Add annotation for cave length and circle radius
 
-sys.stdout.write(string)
+        annotation = inkex.TextElement(x=str(0), y=str(1.3*size))
+        annotation.style = {'font-family': 'Verdana', 'font-size': medium, 'fill': 'black', 'text-anchor': 'middle', 'text-align': 'center'}        
+        cave_length = f'{round(thoriz/1000, 1)} km' if thoriz > 10000 else f'{round(thoriz)} m'
+        circle_radius = f'{scale_rad/1000} km' if scale_rad > 1000 else f'{scale_rad} m'
+        annotation.text = f'length {cave_length}, circle radius is {circle_radius}'
+        
+        yield annotation
 
-sys.exit(0)
+        # Add a title
+        
+        title = inkex.TextElement(x=str(0), y=str(-1.3*size))
+        title.style = {'font-family': 'Verdana', 'font-size': large, 'fill': 'black', 'text-anchor': 'middle', 'text-align': 'center'}        
+        title.text = self.options.title or survey_title
+
+        yield title
+
+if __name__ == '__main__':
+    RoseDiagram().run()
